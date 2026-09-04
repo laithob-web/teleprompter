@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key>
+	<string>Teleprompter</string>
+	<key>CFBundleDisplayName</key>
+	<string>Teleprompter</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.laith.teleprompter</string>
+	<key>CFBundleExecutable</key>
+	<string>Teleprompter</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>26.0</string>
+
+	<!-- Menu-bar only: no Dock icon, no app-switcher entry, no Mission Control tile. -->
+	<key>LSUIElement</key>
+	<true/>
+
+	<key>NSHighResolutionCapable</key>
+	<true/>
+
+	<!-- Phase 2: your voice, for speaking-flow scroll tracking. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Teleprompter listens to your voice so the script scrolls in time with how fast you are actually speaking. Audio is transcribed on this Mac and never leaves it.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Speech is transcribed on-device to follow your position in the script and to pick the right answer. Nothing is recorded or uploaded.</string>
+
+	<!-- Phase 3: the other person's voice, for automatic answer selection. -->
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>Teleprompter listens to the meeting audio coming from your speakers so it can jump to the answer that matches the question you were just asked. Audio is transcribed on this Mac and never leaves it.</string>
+</dict>
+</plist>

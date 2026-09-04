@@ -1,0 +1,15 @@
+# SwiftPM build products
+.build/
+.swiftpm/
+Package.resolved
+
+# Assembled app bundle
+build/
+
+# macOS
+.DS_Store
+
+# Xcode
+*.xcuserdatad
+xcuserdata/
+DerivedData/
