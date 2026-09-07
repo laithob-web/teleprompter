@@ -249,7 +249,11 @@ enum ScriptParser {
                 let start = (display as NSString).length
                 display += s.title
                 s.titleRange = NSRange(location: start, length: (s.title as NSString).length)
-                display += "\n\n"
+                // One newline, not two. A blank line here became an empty
+                // paragraph that collected the body's paragraph spacing on top of
+                // the heading's, opening a gap far larger than either value.
+                // Spacing between heading and body is set in ScriptRenderer.
+                display += "\n"
             }
 
             let bodyStart = (display as NSString).length

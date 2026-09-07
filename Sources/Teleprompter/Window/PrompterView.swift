@@ -455,20 +455,23 @@ final class PrompterView: NSView {
         scrollView.bounds.height * Settings.shared.readingLineFraction
     }
 
-    /// Vertical center of a word in document coordinates.
-    func documentY(forWord index: Int) -> CGFloat? {
-        guard index >= 0, index < script.words.count else { return nil }
-        let charRange = script.words[index].range
-        guard NSMaxRange(charRange) <= textStorage.length else { return nil }
-
+    /// Vertical center of a character range in document coordinates.
+    func documentY(forCharacterRange range: NSRange) -> CGFloat? {
+        guard range.length > 0, NSMaxRange(range) <= textStorage.length else { return nil }
         let glyphRange = layoutManager.glyphRange(
-            forCharacterRange: charRange, actualCharacterRange: nil
+            forCharacterRange: range, actualCharacterRange: nil
         )
         var rect = layoutManager.boundingRect(
             forGlyphRange: glyphRange, in: textContainer
         )
         rect.origin.y += textView.textContainerOrigin.y
         return rect.midY
+    }
+
+    /// Vertical center of a word in document coordinates.
+    func documentY(forWord index: Int) -> CGFloat? {
+        guard index >= 0, index < script.words.count else { return nil }
+        return documentY(forCharacterRange: script.words[index].range)
     }
 
     /// Scroll offset that places `index` exactly on the reading line.
@@ -528,16 +531,27 @@ final class PrompterView: NSView {
         let section = script.sections[index]
         headerLabel.stringValue = section.title
 
-        // Aim at the heading when there is one so you get a beat of context
-        // before the first line you have to say.
-        let charTarget = section.titleRange.length > 0
-            ? section.titleRange.location
-            : section.bodyRange.location
+        // Measuring against a stale layout would land on the wrong line.
+        layoutManager.ensureLayout(for: textContainer)
 
-        guard let word = wordIndex(nearestCharacter: charTarget),
-              let y = documentY(forWord: word) else { return }
+        // Land on the section's first spoken word, with its heading just above.
+        //
+        // This previously looked the *title's* character position up in the word
+        // index — but that index holds body words only, because headings are
+        // never read aloud and must not take part in speech alignment. The lookup
+        // therefore returned the last word at or before the title, which is the
+        // last body word of the PREVIOUS section. Choosing a section scrolled to
+        // the end of the one before it.
+        let documentTarget: CGFloat?
+        if section.wordCount > 0 {
+            documentTarget = documentY(forWord: section.firstWordIndex)
+        } else {
+            // A heading with nothing under it: aim at the heading itself.
+            documentTarget = documentY(forCharacterRange: section.titleRange)
+        }
+        guard let y = documentTarget else { return }
 
-        let offset = y - readingLineY - Settings.shared.fontSize
+        let offset = y - readingLineY
         engine.cancelManualOverride()
         if animated {
             engine.target = offset

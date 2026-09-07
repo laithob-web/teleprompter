@@ -42,8 +42,10 @@ enum ScriptRenderer {
         // deliberately smaller and dimmer than the body text.
         let headingParagraph = NSMutableParagraphStyle()
         headingParagraph.lineHeightMultiple = 1.1
-        headingParagraph.paragraphSpacing = fontSize * 0.35
-        headingParagraph.paragraphSpacingBefore = fontSize * 0.5
+        // Gap between a heading and the answer under it. Kept tight: they are
+        // one unit, and the space before the heading is what separates sections.
+        headingParagraph.paragraphSpacing = fontSize * 0.12
+        headingParagraph.paragraphSpacingBefore = fontSize * 0.7
 
         for section in script.sections where section.titleRange.length > 0 {
             guard NSMaxRange(section.titleRange) <= out.length else { continue }
