@@ -512,6 +512,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
         Settings.shared.showsBorder.toggle()
     }
 
+    func toggleReadingLine() {
+        Settings.shared.showsReadingLine.toggle()
+    }
+
     func adjustBackgroundOpacity(by delta: CGFloat) {
         Settings.shared.backgroundOpacity += delta
     }

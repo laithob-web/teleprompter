@@ -34,6 +34,7 @@ private final class OverlayView: NSView {
     var showsFades = true { didSet { needsDisplay = true } }
     var isLight = true { didSet { needsDisplay = true } }
     var showsBorder = true { didSet { needsDisplay = true } }
+    var showsReadingLine = false { didSet { needsDisplay = true } }
     var cornerRadius: CGFloat = 12
 
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
@@ -52,16 +53,19 @@ private final class OverlayView: NSView {
             drawFade(from: bounds.height - band, to: bounds.height, topDown: false)
         }
 
-        // The reading line: where the word you are currently saying sits.
-        // Deliberately faint — it should register in peripheral vision only.
+        if showsBorder { drawBorder() }
+        if showsReadingLine { drawReadingLine(at: y) }
+    }
+
+    /// The rule marking where the word you are currently saying sits. The scroll
+    /// position already conveys this, so it is off unless asked for.
+    private func drawReadingLine(at y: CGFloat) {
         NSColor.systemTeal.withAlphaComponent(0.28).setStroke()
         let line = NSBezierPath()
         line.lineWidth = 1
         line.move(to: NSPoint(x: 10, y: y + 0.5))
         line.line(to: NSPoint(x: bounds.width - 10, y: y + 0.5))
         line.stroke()
-
-        if showsBorder { drawBorder() }
 
         NSColor.systemTeal.withAlphaComponent(0.55).setFill()
         for isLeft in [true, false] {
@@ -388,6 +392,7 @@ final class PrompterView: NSView {
         overlay.showsFades = s.dimsDistantText
         overlay.isLight = isLightTheme
         overlay.showsBorder = s.showsBorder
+        overlay.showsReadingLine = s.showsReadingLine
 
         // Opacity applies to the background only, never to the whole view.
         // Fading the view dimmed the text along with it, which is why black text

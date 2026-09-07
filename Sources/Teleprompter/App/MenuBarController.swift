@@ -20,6 +20,7 @@ protocol PrompterCommands: AnyObject {
     func setThemeMode(_ raw: String)
     func toggleTextHalo()
     func toggleBorder()
+    func toggleReadingLine()
     func adjustBackgroundOpacity(by delta: CGFloat)
     func jump(toSection index: Int)
     func runInvisibilitySelfTest()
@@ -150,6 +151,8 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         menu.addItem(themeItem)
         add(to: menu, "Show Border", #selector(toggleBorder),
             checked: Settings.shared.showsBorder)
+        add(to: menu, "Show Reading Line", #selector(toggleReadingLine),
+            checked: Settings.shared.showsReadingLine)
         add(to: menu, "Text Halo (for busy backgrounds)", #selector(toggleHalo),
             checked: Settings.shared.textHalo)
         add(to: menu, "More Opaque Background", #selector(moreOpaque))
@@ -220,6 +223,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     }
     @objc private func toggleHalo() { commands?.toggleTextHalo() }
     @objc private func toggleBorder() { commands?.toggleBorder() }
+    @objc private func toggleReadingLine() { commands?.toggleReadingLine() }
     @objc private func moreOpaque() { commands?.adjustBackgroundOpacity(by: 0.15) }
     @objc private func moreTransparent() { commands?.adjustBackgroundOpacity(by: -0.15) }
     @objc private func selfTest() { commands?.runInvisibilitySelfTest() }

@@ -82,6 +82,16 @@ final class Settings {
         set { set("showsBorder", newValue) }
     }
 
+    /// The teal rule marking where the word you are saying sits.
+    ///
+    /// Off by default: it is useful while tuning speech tracking, but it draws
+    /// the eye during an actual call and the scroll position communicates the
+    /// same thing without a line across the text.
+    var showsReadingLine: Bool {
+        get { value("showsReadingLine", false) }
+        set { set("showsReadingLine", newValue) }
+    }
+
     var mirrorHorizontally: Bool {
         get { value("mirrorHorizontally", false) }
         set { set("mirrorHorizontally", newValue) }
