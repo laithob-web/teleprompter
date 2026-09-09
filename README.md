@@ -66,6 +66,30 @@ sections. Prep documents often carry a "story → questions it answers" table;
 those trigger phrases are harvested automatically and attached to the matching
 sections.
 
+## Phone or tablet as the prompter
+
+**Show on Phone…** in the menu starts a small local server and shows a QR code.
+Scan it with a phone on the same wifi.
+
+This is the strongest form of screen-share invisibility available: a second
+device is not part of the screen at all, so no window flag is involved. The Mac
+still does every hard part — system-audio capture, on-device transcription,
+alignment, question matching — and the phone is a live view of the result. The
+script follows your speaking pace and jumps with the answer matcher exactly as
+it does on the Mac; touch-scroll any time and it resumes following a few seconds
+later.
+
+Works on Android, iPhone or tablet with no app to install. The page is
+self-contained — no CDN — so it works on a network with no internet access.
+
+The link carries a key regenerated on every launch, so nobody else on a café or
+office network can read your script by guessing the port. No port is open until
+you ask for the link, and **Stop Phone Link** closes it.
+
+Transport is HTTP with Server-Sent Events rather than WebSocket: the channel only
+ever pushes Mac to phone, which is exactly SSE's shape, and it needs no handshake
+or frame codec on either side.
+
 ## Shortcuts
 
 | Key | |
@@ -146,5 +170,5 @@ Sources/Teleprompter/
 ├── Audio/      microphone and system-audio capture
 ├── Speech/     on-device transcription
 ├── Logic/      reading tracker, question matcher
-└── App/        menu bar, hotkeys, delegate
+├── App/        menu bar, hotkeys, delegate
 ```

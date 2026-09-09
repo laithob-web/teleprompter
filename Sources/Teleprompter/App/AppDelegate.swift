@@ -1,5 +1,6 @@
 import AppKit
 import CoreGraphics
+import CoreImage
 import UniformTypeIdentifiers
 
 @MainActor
@@ -21,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
     /// away from being undone.
     private var jumpHistory: [Int] = []
     private let sampler = BackgroundSampler()
+    private let server = PrompterServer()
 
     // MARK: - Lifecycle
 
@@ -41,7 +43,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
             self.flow.setScript(script)
             self.listener.setScript(script)
             self.updateSpeed()
+            // Tell any connected phone to refetch rather than show a stale script.
+            self.server.broadcastScriptChanged()
         }
+
+        server.scriptProvider = { [weak self] in self?.document.script ?? .empty }
 
         document.onError = { [weak self] message in
             self?.presentAlert("Could not load that script", message)
@@ -74,6 +80,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
         flow.stop()
         listener.stop()
         sampler.stop()
+        server.stop()
         Settings.shared.savedFrame = panel.frame
         HotkeyManager.shared.unregisterAll()
         prompter.engine.stop()
@@ -160,6 +167,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
                 self.prompter.engine.target = nil
             }
             self.updateSpeed()
+            self.server.broadcast(
+                word: cursor,
+                section: self.document.script.section(containingWord: cursor),
+                isConfident: isConfident
+            )
         }
 
         flow.onTranscript = { [weak self] text in
@@ -420,6 +432,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
            index < document.script.sections.count {
             prompter.setHeader(document.script.sections[index].title)
         }
+        broadcastCurrentPosition()
     }
 
     func adjustFontSize(by delta: CGFloat) {
@@ -541,6 +554,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
 
     func jump(toSection index: Int) {
         prompter.jump(toSection: index)
+        broadcastCurrentPosition()
+    }
+
+    /// Mirrors wherever the Mac has moved to onto any connected phone.
+    private func broadcastCurrentPosition() {
+        guard server.isRunning, let word = prompter.wordIndexAtReadingLine() else { return }
+        server.broadcast(
+            word: word,
+            section: document.script.section(containingWord: word),
+            isConfident: true
+        )
     }
 
     var isMenuBarIconHidden: Bool { Settings.shared.hidesMenuBarIcon }
@@ -592,6 +616,86 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
     /// APIs consult, and needs no Screen Recording permission. It proves the flag
     /// is set; it cannot prove a given app honors it, so the alert still asks for
     /// one real capture check.
+    /// Starts the local server if needed and shows a QR code to point a phone at.
+    ///
+    /// A phone is the strongest answer to screen-share invisibility available:
+    /// it is a different device, so it cannot appear in a capture at all.
+    func showOnPhone() {
+        if !server.isRunning {
+            do {
+                try server.start()
+            } catch {
+                presentAlert(
+                    "Could not start the phone link",
+                    "No local port was available. \(error.localizedDescription)"
+                )
+                return
+            }
+        }
+
+        guard let url = server.url else {
+            presentAlert(
+                "Not connected to a network",
+                """
+                The Mac needs to be on wifi for a phone to reach it. Join a \
+                network and try again.
+                """
+            )
+            return
+        }
+
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Open this on your phone"
+        alert.informativeText = """
+            Scan with your phone's camera, on the same wifi as this Mac.
+
+            \(url.absoluteString)
+
+            The script follows along as you speak and jumps with the answer \
+            matcher, exactly as it does here. Scroll by touch any time — it \
+            resumes following a few seconds later.
+
+            The link carries a one-time key that changes each launch, so nobody \
+            else on the network can read your script.
+            """
+        alert.addButton(withTitle: "Copy Link")
+        alert.addButton(withTitle: "Done")
+        if let qr = Self.qrImage(for: url.absoluteString) {
+            alert.accessoryView = NSImageView(image: qr)
+        }
+        WindowCloak.cloak(alert.window)
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(url.absoluteString, forType: .string)
+        }
+    }
+
+    var isServingToPhone: Bool { server.isRunning }
+
+    func stopPhoneLink() {
+        server.stop()
+    }
+
+    private static func qrImage(for string: String) -> NSImage? {
+        guard let filter = CIFilter(name: "CIQRCodeGenerator") else { return nil }
+        filter.setValue(Data(string.utf8), forKey: "inputMessage")
+        // High correction: the code still scans on a dim laptop screen.
+        filter.setValue("H", forKey: "inputCorrectionLevel")
+        guard let output = filter.outputImage else { return nil }
+
+        let side: CGFloat = 220
+        let scale = side / output.extent.width
+        let scaled = output.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+
+        let context = CIContext()
+        guard let cgImage = context.createCGImage(scaled, from: scaled.extent) else {
+            return nil
+        }
+        return NSImage(cgImage: cgImage, size: NSSize(width: side, height: side))
+    }
+
     func runInvisibilitySelfTest() {
         let ours = panel.windowNumber
         let info = CGWindowListCopyWindowInfo(.optionAll, kCGNullWindowID) as? [[String: Any]]

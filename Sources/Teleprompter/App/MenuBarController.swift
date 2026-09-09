@@ -23,6 +23,8 @@ protocol PrompterCommands: AnyObject {
     func toggleReadingLine()
     func adjustBackgroundOpacity(by delta: CGFloat)
     func jump(toSection index: Int)
+    func showOnPhone()
+    func stopPhoneLink()
     func runInvisibilitySelfTest()
     func toggleMenuBarIcon()
     func toggleFollowMode()
@@ -39,6 +41,7 @@ protocol PrompterCommands: AnyObject {
     var isFollowing: Bool { get }
     var isAnswering: Bool { get }
     var showsDiagnostics: Bool { get }
+    var isServingToPhone: Bool { get }
     var scriptName: String { get }
     var sectionTitles: [String] { get }
 }
@@ -178,6 +181,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         add(to: menu, "Jump More Readily", #selector(moreSensitive))
         add(to: menu, "Jump Less Readily", #selector(lessSensitive))
         add(to: menu, "Show Diagnostics", #selector(toggleDiag), checked: c.showsDiagnostics)
+        add(to: menu, "Show on Phone…", #selector(showOnPhone))
+        if c.isServingToPhone {
+            add(to: menu, "Stop Phone Link", #selector(stopPhone))
+        }
         add(to: menu, "Verify Invisibility…", #selector(selfTest))
         menu.addItem(.separator())
         add(to: menu, "Quit Teleprompter", #selector(quit), key: "q")
@@ -227,6 +234,8 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func moreOpaque() { commands?.adjustBackgroundOpacity(by: 0.15) }
     @objc private func moreTransparent() { commands?.adjustBackgroundOpacity(by: -0.15) }
     @objc private func selfTest() { commands?.runInvisibilitySelfTest() }
+    @objc private func showOnPhone() { commands?.showOnPhone() }
+    @objc private func stopPhone() { commands?.stopPhoneLink() }
     @objc private func toggleIcon() { commands?.toggleMenuBarIcon() }
     @objc private func toggleFollow() { commands?.toggleFollowMode() }
     @objc private func toggleAnswer() { commands?.toggleAnswerMode() }
