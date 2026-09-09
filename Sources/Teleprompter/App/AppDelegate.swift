@@ -74,6 +74,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
 
         showPanel()
         updateSampler()
+
+        // Restore the phone link so a device that had the page open reconnects
+        // on its own after a restart, instead of failing silently.
+        if Settings.shared.phoneLinkEnabled { try? server.start() }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -624,6 +628,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
         if !server.isRunning {
             do {
                 try server.start()
+                Settings.shared.phoneLinkEnabled = true
             } catch {
                 presentAlert(
                     "Could not start the phone link",
@@ -656,8 +661,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
             matcher, exactly as it does here. Scroll by touch any time — it \
             resumes following a few seconds later.
 
-            The link carries a one-time key that changes each launch, so nobody \
-            else on the network can read your script.
+            The link carries a private key, so nobody else on the network can \
+            read your script. It survives restarts — rotate it from the menu to \
+            revoke links you have already shared.
             """
         alert.addButton(withTitle: "Copy Link")
         alert.addButton(withTitle: "Done")
@@ -682,6 +688,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
 
     func stopPhoneLink() {
         server.stop()
+        Settings.shared.phoneLinkEnabled = false
+    }
+
+    /// Rotates the access key, invalidating every link already handed out.
+    func regeneratePhoneKey() {
+        Settings.shared.phoneLinkToken = Settings.makeToken()
+        presentAlert(
+            "Phone key rotated",
+            "Existing links no longer work. Open \"Show on Phone…\" to scan the new code."
+        )
     }
 
     private static func qrImage(for string: String) -> NSImage? {

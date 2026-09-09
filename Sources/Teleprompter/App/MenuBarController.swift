@@ -25,6 +25,7 @@ protocol PrompterCommands: AnyObject {
     func jump(toSection index: Int)
     func showOnPhone()
     func stopPhoneLink()
+    func regeneratePhoneKey()
     func runInvisibilitySelfTest()
     func toggleMenuBarIcon()
     func toggleFollowMode()
@@ -184,6 +185,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         add(to: menu, "Show on Phone…", #selector(showOnPhone))
         if c.isServingToPhone {
             add(to: menu, "Stop Phone Link", #selector(stopPhone))
+            add(to: menu, "Rotate Phone Key", #selector(rotateKey))
         }
         add(to: menu, "Verify Invisibility…", #selector(selfTest))
         menu.addItem(.separator())
@@ -236,6 +238,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func selfTest() { commands?.runInvisibilitySelfTest() }
     @objc private func showOnPhone() { commands?.showOnPhone() }
     @objc private func stopPhone() { commands?.stopPhoneLink() }
+    @objc private func rotateKey() { commands?.regeneratePhoneKey() }
     @objc private func toggleIcon() { commands?.toggleMenuBarIcon() }
     @objc private func toggleFollow() { commands?.toggleFollowMode() }
     @objc private func toggleAnswer() { commands?.toggleAnswerMode() }

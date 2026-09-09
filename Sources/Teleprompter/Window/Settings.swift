@@ -1,4 +1,5 @@
 import AppKit
+import Security
 
 /// User-tunable display and behavior settings, persisted to UserDefaults.
 final class Settings {
@@ -122,6 +123,36 @@ final class Settings {
     var showsDiagnostics: Bool {
         get { value("showsDiagnostics", false) }
         set { set("showsDiagnostics", newValue) }
+    }
+
+    /// Serve the prompter to a phone. Persisted so the link survives a restart
+    /// instead of silently disappearing when the app is quit.
+    var phoneLinkEnabled: Bool {
+        get { value("phoneLinkEnabled", false) }
+        set { set("phoneLinkEnabled", newValue) }
+    }
+
+    /// Access key for the phone link.
+    ///
+    /// Persisted rather than regenerated each launch, so a phone can keep the
+    /// page open or bookmarked across restarts. It is still 128 random bits and
+    /// can be rotated on demand from the menu.
+    var phoneLinkToken: String {
+        get {
+            if let existing = defaults.string(forKey: "phoneLinkToken"), !existing.isEmpty {
+                return existing
+            }
+            let fresh = Settings.makeToken()
+            defaults.set(fresh, forKey: "phoneLinkToken")
+            return fresh
+        }
+        set { set("phoneLinkToken", newValue) }
+    }
+
+    static func makeToken() -> String {
+        var bytes = [UInt8](repeating: 0, count: 16)
+        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        return bytes.map { String(format: "%02x", $0) }.joined()
     }
 
     var lastScriptPath: String? {

@@ -26,13 +26,9 @@ final class PrompterServer {
     /// Guards the script against anyone else on the network.
     ///
     /// Without it, every device on a café or office wifi could fetch your notes
-    /// by guessing a port. The token is regenerated on each launch and is carried
-    /// in the QR code, so it never has to be typed.
-    let token: String = {
-        var bytes = [UInt8](repeating: 0, count: 16)
-        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
-        return bytes.map { String(format: "%02x", $0) }.joined()
-    }()
+    /// by guessing a port. Persisted between launches so a phone can keep the
+    /// page open across a restart; rotate it from the menu to revoke old links.
+    var token: String { Settings.shared.phoneLinkToken }
 
     /// Supplies the current script whenever a device asks for it.
     var scriptProvider: (() -> ParsedScript)?
@@ -41,6 +37,9 @@ final class PrompterServer {
 
     func start(preferredPort: UInt16 = 8787) throws {
         stop()
+        // Force the key into existence now rather than on the first request, so
+        // the URL is known and stable the moment the server is up.
+        _ = token
 
         // Walk a few ports rather than failing outright if one is taken.
         var lastError: Error?
