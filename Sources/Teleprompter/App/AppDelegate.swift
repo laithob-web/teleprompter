@@ -652,10 +652,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.messageText = "Open this on your phone"
+        let others = server.candidateURLs
+            .filter { $0.url != url }
+            .map { "\($0.interface):  \($0.url.absoluteString)" }
+            .joined(separator: "\n")
+
         alert.informativeText = """
             Scan with your phone's camera, on the same wifi as this Mac.
 
             \(url.absoluteString)
+            \(others.isEmpty ? "" : "\nOther addresses on this Mac:\n\(others)\n")
+            If the page will not open, the wifi is probably blocking device-to-device \
+            traffic. Turn on your phone's hotspot, join this Mac to it, and open this \
+            menu again for a new address.
 
             The script follows along as you speak and jumps with the answer \
             matcher, exactly as it does here. Scroll by touch any time — it \

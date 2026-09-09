@@ -96,33 +96,61 @@ final class PrompterServer {
         return URL(string: "http://\(host):\(port)/?t=\(token)")
     }
 
-    /// First non-loopback IPv4 address, which on a laptop is the wifi interface.
-    static func localAddress() -> String? {
+    /// Every routable IPv4 address this Mac has, best candidate first.
+    ///
+    /// Returning only the wifi address is not enough on a large shared network,
+    /// where the phone can sit on a different access point or VLAN and never
+    /// reach it. A phone hotspot or USB tethering creates a second interface that
+    /// does work, and the user needs to see that address to use it.
+    static func localAddresses() -> [(interface: String, address: String)] {
         var head: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&head) == 0, let first = head else { return nil }
+        guard getifaddrs(&head) == 0, let first = head else { return [] }
         defer { freeifaddrs(head) }
 
-        var best: String?
+        var found: [(String, String)] = []
         for pointer in sequence(first: first, next: { $0.pointee.ifa_next }) {
             let interface = pointer.pointee
-            guard interface.ifa_addr.pointee.sa_family == UInt8(AF_INET),
+            guard let addr = interface.ifa_addr,
+                  addr.pointee.sa_family == UInt8(AF_INET),
                   (interface.ifa_flags & UInt32(IFF_LOOPBACK)) == 0,
                   (interface.ifa_flags & UInt32(IFF_UP)) != 0
             else { continue }
 
             var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
             guard getnameinfo(
-                interface.ifa_addr, socklen_t(interface.ifa_addr.pointee.sa_len),
+                addr, socklen_t(addr.pointee.sa_len),
                 &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST
             ) == 0 else { continue }
 
             let address = String(cString: host)
-            let name = String(cString: interface.ifa_name)
-            // Prefer wifi; fall back to anything else routable.
-            if name.hasPrefix("en") { return address }
-            if best == nil { best = address }
+            // Self-assigned addresses mean the interface never got a lease.
+            guard !address.hasPrefix("169.254.") else { continue }
+            found.append((String(cString: interface.ifa_name), address))
         }
-        return best
+
+        // Tethering and hotspot interfaces first: when they exist they are the
+        // ones that actually carry phone-to-Mac traffic.
+        return found.sorted { lhs, rhs in
+            rank(lhs.0) < rank(rhs.0)
+        }
+    }
+
+    /// Lower sorts earlier. bridge/ap are hotspot, en is wifi or ethernet.
+    private static func rank(_ interface: String) -> Int {
+        if interface.hasPrefix("bridge") || interface.hasPrefix("ap") { return 0 }
+        if interface.hasPrefix("en") { return 1 }
+        return 2
+    }
+
+    static func localAddress() -> String? { localAddresses().first?.address }
+
+    /// Every URL a device could try, in the order worth trying them.
+    var candidateURLs: [(interface: String, url: URL)] {
+        guard isRunning else { return [] }
+        return Self.localAddresses().compactMap { entry in
+            URL(string: "http://\(entry.address):\(port)/?t=\(token)")
+                .map { (entry.interface, $0) }
+        }
     }
 
     // MARK: - Connections
