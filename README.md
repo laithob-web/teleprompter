@@ -10,7 +10,7 @@ on-device; no audio is recorded and nothing is sent anywhere.
 
 | | Feature | How |
 |---|---|---|
-| 1 | **Invisible to screen sharing** | `NSWindow.sharingType = .none` excludes the panel from ScreenCaptureKit, the capture path Zoom, Teams and Chrome all use |
+| 1 | **Invisible to screen sharing** | `NSWindow.sharingType = .none` excludes the panel from ScreenCaptureKit, the capture path Zoom, Teams and Chrome all use. Verified end to end against Zoom |
 | 2 | **Jumps to the matching answer** | A CoreAudio process tap transcribes the *other* person on-device, then a two-tier matcher picks the section |
 | 3 | **Scrolls at your speaking pace** | Your mic is transcribed separately and aligned to the script with a gapped sequence alignment |
 | 4 | **Trackpad scroll any time** | Manual input hard-suspends the animation, then re-anchors where you left off |
@@ -167,8 +167,11 @@ reading "Failure".
   icon itself is drawn by macOS and cannot be hidden from capture. Hide it and
   drive by hotkeys if that matters.
 - **Nothing hides you from a camera.** Or from someone filming your screen.
-- **Re-verify after Zoom updates.** *Verify Invisibility…* checks the flag with
-  the window server; a real screen share is the only end-to-end test.
+- **Re-verify after Zoom updates.** Confirmed working end to end against Zoom
+  screen sharing on macOS 26, including over a fullscreen slideshow. That is a
+  point-in-time result, not a guarantee: Zoom changes its capture path from time
+  to time. *Verify Invisibility…* checks the flag with the window server in
+  seconds, but only a real share re-proves the whole path.
 - **Match thresholds are script-dependent.** Vocabulary and section count both
   shift the scores. *Jump More/Less Readily* tunes it.
 
