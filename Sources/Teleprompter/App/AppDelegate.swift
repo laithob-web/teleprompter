@@ -662,7 +662,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
         alert.addButton(withTitle: "Copy Link")
         alert.addButton(withTitle: "Done")
         if let qr = Self.qrImage(for: url.absoluteString) {
-            alert.accessoryView = NSImageView(image: qr)
+            // NSImageView(image:) comes back with a zero frame, and NSAlert sizes
+            // its accessory view from that frame — so the code was present but
+            // laid out at zero size and never appeared.
+            let view = NSImageView(frame: NSRect(origin: .zero, size: qr.size))
+            view.image = qr
+            view.imageScaling = .scaleNone
+            alert.accessoryView = view
         }
         WindowCloak.cloak(alert.window)
 
@@ -685,15 +691,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
         filter.setValue("H", forKey: "inputCorrectionLevel")
         guard let output = filter.outputImage else { return nil }
 
-        let side: CGFloat = 220
-        let scale = side / output.extent.width
-        let scaled = output.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        // Nearest-neighbour at a whole-number scale. The generator emits roughly
+        // 43x43; smoothing it up to display size softens the module edges, which
+        // is the one thing a scanner needs to be crisp.
+        let scale = max(1, (220 / output.extent.width).rounded(.down))
+        let scaled = output
+            .samplingNearest()
+            .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
 
         let context = CIContext()
         guard let cgImage = context.createCGImage(scaled, from: scaled.extent) else {
             return nil
         }
-        return NSImage(cgImage: cgImage, size: NSSize(width: side, height: side))
+        return NSImage(cgImage: cgImage, size: scaled.extent.size)
     }
 
     func runInvisibilitySelfTest() {
