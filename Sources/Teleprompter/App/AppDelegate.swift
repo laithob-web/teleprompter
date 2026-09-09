@@ -72,6 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
         wireFlow()
         wireListener()
 
+        panel.setAlwaysOnTop(Settings.shared.staysAboveFullscreen)
         showPanel()
         updateSampler()
 
@@ -148,6 +149,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
         }
         m.register(keyCode: Key.z, modifiers: Key.cmdOpt) { [weak self] in
             self?.undoJump()
+        }
+        m.register(keyCode: Key.s, modifiers: Key.cmdOpt) { [weak self] in
+            self?.togglePresentationMode()
         }
         // Only route back in when the icon is hidden.
         m.register(keyCode: Key.m, modifiers: Key.cmdOpt) { [weak self] in
@@ -451,6 +455,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
     func toggleMirror() {
         Settings.shared.mirrorHorizontally.toggle()
     }
+
+    /// Lifts the panel over a fullscreen slideshow so you can still read it while
+    /// presenting. It stays excluded from screen capture either way.
+    func togglePresentationMode() {
+        Settings.shared.staysAboveFullscreen.toggle()
+        panel.setAlwaysOnTop(Settings.shared.staysAboveFullscreen)
+        showPanel()
+        prompter.setHeader(
+            Settings.shared.staysAboveFullscreen
+                ? "Above fullscreen — visible over slideshows"
+                : "Normal floating level"
+        )
+    }
+
+    var staysAboveFullscreen: Bool { Settings.shared.staysAboveFullscreen }
 
     func toggleDimming() {
         Settings.shared.dimsDistantText.toggle()

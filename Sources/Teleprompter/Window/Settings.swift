@@ -93,6 +93,12 @@ final class Settings {
         set { set("showsReadingLine", newValue) }
     }
 
+    /// Float above fullscreen slideshows while presenting.
+    var staysAboveFullscreen: Bool {
+        get { value("staysAboveFullscreen", false) }
+        set { set("staysAboveFullscreen", newValue) }
+    }
+
     var mirrorHorizontally: Bool {
         get { value("mirrorHorizontally", false) }
         set { set("mirrorHorizontally", newValue) }

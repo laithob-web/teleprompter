@@ -66,6 +66,16 @@ sections. Prep documents often carry a "story → questions it answers" table;
 those trigger phrases are harvested automatically and attached to the matching
 sections.
 
+## Presenting
+
+Keynote, PowerPoint and Google Slides put their slideshow window far above the
+normal floating level, so while presenting the script ends up buried under your
+own slides — still hidden from the audience, just invisible to you too.
+
+**Stay Above Fullscreen Slides** (⌥⌘S) lifts the panel to the system shielding
+level, above any slideshow. It remains excluded from screen capture at that
+level; only the stacking order changes.
+
 ## Phone or tablet as the prompter
 
 **Show on Phone…** in the menu starts a small local server and shows a QR code.
@@ -100,6 +110,7 @@ or frame codec on either side.
 | `⌥⌘A` | Answer questions automatically |
 | `⌥⌘Z` | Undo the last automatic jump |
 | `⌥⌘C` | Click-through mode |
+| `⌥⌘S` | Stay above fullscreen slides |
 | `⌥⌘R` | Resync after scrolling by hand |
 | `⌥⌘[` `⌥⌘]` | Previous / next section |
 | `⌥⌘-` `⌥⌘=` | Text size |

@@ -60,9 +60,20 @@ final class PrompterPanel: NSPanel {
         didSet { ignoresMouseEvents = isClickThrough }
     }
 
-    /// Raises the panel above other floating windows when a meeting app insists
-    /// on sitting on top. Cosmetic escape hatch, not needed in the common case.
+    /// Raises the panel above fullscreen slideshows.
+    ///
+    /// Keynote, PowerPoint and Google Slides put their presentation window far
+    /// above `.floating`, so while presenting the script is buried under your own
+    /// slides — still hidden from the audience, just invisible to you as well.
+    /// The shielding level is the one the system reserves for windows that must
+    /// cover everything, which is exactly the requirement here.
     func setAlwaysOnTop(_ aggressive: Bool) {
-        level = aggressive ? .screenSaver : .floating
+        level = aggressive
+            ? NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()))
+            : .floating
+        // Re-assert: changing level can drop a window out of the active Space.
+        collectionBehavior = [
+            .canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .stationary,
+        ]
     }
 }

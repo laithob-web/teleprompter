@@ -99,6 +99,7 @@ enum Key {
     static let m = kVK_ANSI_M
     static let f = kVK_ANSI_F
     static let a = kVK_ANSI_A
+    static let s = kVK_ANSI_S
     static let z = kVK_ANSI_Z
     static let leftBracket = kVK_ANSI_LeftBracket
     static let rightBracket = kVK_ANSI_RightBracket
