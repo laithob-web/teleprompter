@@ -10,12 +10,8 @@ protocol PrompterCommands: AnyObject {
     func togglePanelVisibility()
     func toggleClickThrough()
     func toggleAutoScroll()
-    func nextSection()
-    func previousSection()
-    func resync()
     func adjustFontSize(by delta: CGFloat)
     func adjustSpeed(by delta: Double)
-    func toggleMirror()
     func togglePresentationMode()
     func toggleDimming()
     func setThemeMode(_ raw: String)
@@ -24,26 +20,20 @@ protocol PrompterCommands: AnyObject {
     func toggleReadingLine()
     func adjustBackgroundOpacity(by delta: CGFloat)
     func jump(toSection index: Int)
-    func showOnPhone()
-    func stopPhoneLink()
-    func regeneratePhoneKey()
     func runInvisibilitySelfTest()
     func toggleMenuBarIcon()
     func toggleFollowMode()
     func toggleAnswerMode()
     func undoJump()
     func toggleDiagnostics()
-    func adjustMatchSensitivity(by delta: Double)
 
     var isPanelVisible: Bool { get }
     var isClickThrough: Bool { get }
     var isAutoScrolling: Bool { get }
-    var isMirrored: Bool { get }
     var isMenuBarIconHidden: Bool { get }
     var isFollowing: Bool { get }
     var isAnswering: Bool { get }
     var showsDiagnostics: Bool { get }
-    var isServingToPhone: Bool { get }
     var staysAboveFullscreen: Bool { get }
     var scriptName: String { get }
     var sectionTitles: [String] { get }
@@ -135,9 +125,6 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             menu.addItem(item)
         }
 
-        add(to: menu, "Next Section", #selector(nextSection), hint: "⌥⌘]")
-        add(to: menu, "Previous Section", #selector(previousSection), hint: "⌥⌘[")
-        add(to: menu, "Resync", #selector(resync), hint: "⌥⌘R")
         menu.addItem(.separator())
 
         add(to: menu, "Larger Text", #selector(larger), hint: "⌥⌘=")
@@ -167,14 +154,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         add(to: menu, "More Transparent Background", #selector(moreTransparent))
         add(to: menu, "Fade Edges", #selector(toggleDimming),
             checked: Settings.shared.dimsDistantText)
-        add(to: menu, "Mirror (beam splitter)", #selector(toggleMirror),
-            checked: c.isMirrored)
         menu.addItem(.separator())
 
         let speed = NSMenuItem(
-            title: String(format: "Speed: %.0f wpm · Text: %.0fpt · Match: %.2f · BG: %.0f%%",
+            title: String(format: "Speed: %.0f wpm · Text: %.0fpt · BG: %.0f%%",
                           Settings.shared.fallbackWPM, Settings.shared.fontSize,
-                          Settings.shared.matchThreshold,
                           Settings.shared.backgroundOpacity * 100),
             action: nil, keyEquivalent: ""
         )
@@ -183,14 +167,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         menu.addItem(.separator())
 
         add(to: menu, "Hide Menu Bar Icon", #selector(toggleIcon), hint: "⌥⌘M")
-        add(to: menu, "Jump More Readily", #selector(moreSensitive))
-        add(to: menu, "Jump Less Readily", #selector(lessSensitive))
         add(to: menu, "Show Diagnostics", #selector(toggleDiag), checked: c.showsDiagnostics)
-        add(to: menu, "Show on Phone…", #selector(showOnPhone))
-        if c.isServingToPhone {
-            add(to: menu, "Stop Phone Link", #selector(stopPhone))
-            add(to: menu, "Rotate Phone Key", #selector(rotateKey))
-        }
         add(to: menu, "Verify Invisibility…", #selector(selfTest))
         menu.addItem(.separator())
         add(to: menu, "Quit Teleprompter", #selector(quit), key: "q")
@@ -222,14 +199,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func togglePanel() { commands?.togglePanelVisibility() }
     @objc private func toggleAutoScroll() { commands?.toggleAutoScroll() }
     @objc private func toggleClickThrough() { commands?.toggleClickThrough() }
-    @objc private func nextSection() { commands?.nextSection() }
-    @objc private func previousSection() { commands?.previousSection() }
-    @objc private func resync() { commands?.resync() }
     @objc private func larger() { commands?.adjustFontSize(by: 2) }
     @objc private func smaller() { commands?.adjustFontSize(by: -2) }
     @objc private func faster() { commands?.adjustSpeed(by: 10) }
     @objc private func slower() { commands?.adjustSpeed(by: -10) }
-    @objc private func toggleMirror() { commands?.toggleMirror() }
     @objc private func togglePresentation() { commands?.togglePresentationMode() }
     @objc private func toggleDimming() { commands?.toggleDimming() }
     @objc private func pickTheme(_ sender: NSMenuItem) {
@@ -241,16 +214,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func moreOpaque() { commands?.adjustBackgroundOpacity(by: 0.15) }
     @objc private func moreTransparent() { commands?.adjustBackgroundOpacity(by: -0.15) }
     @objc private func selfTest() { commands?.runInvisibilitySelfTest() }
-    @objc private func showOnPhone() { commands?.showOnPhone() }
-    @objc private func stopPhone() { commands?.stopPhoneLink() }
-    @objc private func rotateKey() { commands?.regeneratePhoneKey() }
     @objc private func toggleIcon() { commands?.toggleMenuBarIcon() }
     @objc private func toggleFollow() { commands?.toggleFollowMode() }
     @objc private func toggleAnswer() { commands?.toggleAnswerMode() }
     @objc private func undoJump() { commands?.undoJump() }
     @objc private func toggleDiag() { commands?.toggleDiagnostics() }
-    @objc private func moreSensitive() { commands?.adjustMatchSensitivity(by: 0.1) }
-    @objc private func lessSensitive() { commands?.adjustMatchSensitivity(by: -0.1) }
     @objc private func quit() { NSApp.terminate(nil) }
 
     @objc private func jumpToSection(_ sender: NSMenuItem) {

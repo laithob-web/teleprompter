@@ -287,6 +287,8 @@ final class PrompterServer {
 
     /// Pushes the current reading position to every connected device.
     func broadcast(word: Int, section: Int?, isConfident: Bool) {
+        // Called on every cursor update; skip the encoding when nobody is here.
+        guard isRunning, !eventClients.isEmpty else { return }
         let payload: [String: Any] = [
             "word": word,
             "section": section as Any,

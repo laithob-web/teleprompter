@@ -76,9 +76,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
         showPanel()
         updateSampler()
 
-        // Restore the phone link so a device that had the page open reconnects
-        // on its own after a restart, instead of failing silently.
-        if Settings.shared.phoneLinkEnabled { try? server.start() }
+        // The phone link is not currently reachable from the menu, so it must not
+        // start on its own — an open port with no way to close it. The server and
+        // its page are kept in Sources/Teleprompter/Server for when it is wanted.
     }
 
     func applicationWillTerminate(_ notification: Notification) {
