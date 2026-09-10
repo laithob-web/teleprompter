@@ -19,7 +19,9 @@ enum ScriptRenderer {
         // Generous leading — teleprompter text is read in peripheral vision and
         // tight line spacing is the main cause of losing your place.
         bodyParagraph.lineHeightMultiple = 1.35
-        bodyParagraph.paragraphSpacing = fontSize * 0.6
+        // Sole source of the gap between paragraphs, now that blank lines are
+        // collapsed in the parser.
+        bodyParagraph.paragraphSpacing = fontSize * 0.5
         bodyParagraph.alignment = .left
         bodyParagraph.lineBreakMode = .byWordWrapping
 

@@ -71,7 +71,15 @@ enum ScriptParser {
         var currentBody: [String] = []
 
         func flush() {
+            // Blank lines are dropped, not preserved.
+            //
+            // A blank line renders as an empty paragraph, so a single paragraph
+            // break costs a full line height plus the paragraph spacing on either
+            // side of it — roughly 2.5x the font size where 0.6x was intended.
+            // Paragraph spacing alone does that job, and does it consistently.
             let body = currentBody
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
                 .joined(separator: "\n")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             // Drop entirely empty leading preamble, but keep empty titled sections
