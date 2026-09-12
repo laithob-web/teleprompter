@@ -137,7 +137,7 @@ enum GoogleDocsLoader {
         text = replace(text, #"(?i)<br\s*/?>"#, with: "\n")
         text = replace(text, #"(?is)<h[1-6][^>]*>(.*?)</h[1-6]>"#,
                        with: "\n\n" + headingMarker + "$1\n\n")
-        text = replace(text, #"(?is)<li[^>]*>(.*?)</li>"#, with: "\n$1")
+        text = writeListMarkers(text)
         text = replace(text, #"(?is)</p\s*>"#, with: "\n\n")
         text = replace(text, #"(?is)</t[dh]\s*>"#, with: "\n")
         text = replace(text, #"(?is)</tr\s*>"#, with: "\n")
@@ -173,6 +173,102 @@ enum GoogleDocsLoader {
         text = text.replacingOccurrences(of: headingMarker, with: "")
 
         return promoteQuestionLines(text.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    // MARK: - Lists
+
+    /// Writes list numbers and bullets into the text.
+    ///
+    /// Google Docs draws list markers with CSS counters, so the exported HTML
+    /// carries no "1." at all — each item is bare text inside `<li>`, and
+    /// converting the tags naively silently drops every number. A real document
+    /// had 29 numbered lists and 111 items, all rendered unnumbered.
+    ///
+    /// Two details of the export matter. Lists are written flat: nesting lives
+    /// only in the class suffix (`lst-kix_…-2`), never in nested tags. And a
+    /// list interrupted by a paragraph resumes as a new `<ol start="4">`, so
+    /// restarting each list at 1 would show the wrong numbers.
+    static func writeListMarkers(_ html: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?is)<(ol|ul)\b([^>]*)>|</(?:ol|ul)\s*>|<li\b[^>]*>"#
+        ) else { return html }
+
+        let source = html as NSString
+        var output = ""
+        var cursor = 0
+        var open: [(ordered: Bool, level: Int, next: Int)] = []
+
+        for match in regex.matches(in: html, range: NSRange(location: 0, length: source.length)) {
+            output += source.substring(
+                with: NSRange(location: cursor, length: match.range.location - cursor)
+            )
+            cursor = NSMaxRange(match.range)
+
+            if match.range(at: 1).location != NSNotFound {
+                let kind = source.substring(with: match.range(at: 1)).lowercased()
+                let attributes = source.substring(with: match.range(at: 2))
+                open.append((kind == "ol", listLevel(attributes), listStart(attributes)))
+            } else if source.substring(with: match.range).hasPrefix("</") {
+                if !open.isEmpty { open.removeLast() }
+            } else if var list = open.popLast() {
+                let marker = list.ordered ? listMarker(list.next, level: list.level) + ". " : "• "
+                list.next += 1
+                open.append(list)
+                output += "\n" + marker
+            } else {
+                output += "\n"
+            }
+        }
+        output += source.substring(from: cursor)
+        return output
+    }
+
+    /// Nesting depth from Google's class suffix: `lst-kix_abc123-2` is level 2.
+    private static func listLevel(_ attributes: String) -> Int {
+        guard let range = attributes.range(
+            of: #"lst-kix_[A-Za-z0-9]+-\d+"#, options: .regularExpression
+        ) else { return 0 }
+        return Int(attributes[range].split(separator: "-").last ?? "0") ?? 0
+    }
+
+    private static func listStart(_ attributes: String) -> Int {
+        guard let range = attributes.range(
+            of: #"start="\d+""#, options: .regularExpression
+        ) else { return 1 }
+        return Int(attributes[range].filter(\.isNumber)) ?? 1
+    }
+
+    /// Google cycles decimal, lower-latin, lower-roman as lists nest, and repeats.
+    private static func listMarker(_ number: Int, level: Int) -> String {
+        switch level % 3 {
+        case 1: return latin(number)
+        case 2: return roman(number)
+        default: return String(number)
+        }
+    }
+
+    private static func latin(_ number: Int) -> String {
+        var n = max(1, number)
+        var letters = ""
+        while n > 0 {
+            n -= 1
+            letters = String(UnicodeScalar(UInt8(97 + n % 26))) + letters
+            n /= 26
+        }
+        return letters
+    }
+
+    private static func roman(_ number: Int) -> String {
+        let table: [(Int, String)] = [
+            (1000, "m"), (900, "cm"), (500, "d"), (400, "cd"), (100, "c"), (90, "xc"),
+            (50, "l"), (40, "xl"), (10, "x"), (9, "ix"), (5, "v"), (4, "iv"), (1, "i"),
+        ]
+        var n = max(1, number)
+        var result = ""
+        for (value, symbol) in table {
+            while n >= value { result += symbol; n -= value }
+        }
+        return result
     }
 
     /// Sentinel marking a converted heading. U+0001 cannot occur in a document,

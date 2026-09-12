@@ -284,6 +284,22 @@ enum ScriptParser {
         return ParsedScript(displayText: display, sections: sections, words: words)
     }
 
+    /// A marker is a number, one letter, or a roman numeral that opens its line
+    /// and is followed by a full stop — "1.", "b.", "iv.".
+    ///
+    /// The letter form is deliberately limited to one character: allowing two or
+    /// three would swallow real words that open a sentence, like "Yes." or "So.".
+    private static func isListMarker(
+        _ word: String, at range: NSRange, in text: NSString
+    ) -> Bool {
+        let startsLine = range.location == 0
+            || text.character(at: range.location - 1) == 0x0A
+        let end = NSMaxRange(range)
+        let followedByStop = end < text.length && text.character(at: end) == 0x2E
+        guard startsLine, followedByStop else { return false }
+        return word.range(of: #"^(\d+|[a-z]|[ivx]+)$"#, options: .regularExpression) != nil
+    }
+
     private static func bodyWords(
         from body: String,
         offsetBy offset: Int,
@@ -296,6 +312,9 @@ enum ScriptParser {
             options: [.byWords, .localized]
         ) { substring, range, _, _ in
             guard let substring else { return }
+            // List numbers are shown but never spoken; indexing them would feed
+            // "one, two, three" into speech alignment as words to wait for.
+            if isListMarker(substring, at: range, in: ns) { return }
             let normalized = TextNormalizer.normalize(substring)
             guard !normalized.isEmpty else { return }
             words.append(WordRef(
