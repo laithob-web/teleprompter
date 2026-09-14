@@ -13,6 +13,7 @@ protocol PrompterCommands: AnyObject {
     func adjustFontSize(by delta: CGFloat)
     func adjustSpeed(by delta: Double)
     func togglePresentationMode()
+    func toggleSectionList()
     func toggleDimming()
     func setThemeMode(_ raw: String)
     func toggleTextHalo()
@@ -35,6 +36,7 @@ protocol PrompterCommands: AnyObject {
     var isAnswering: Bool { get }
     var showsDiagnostics: Bool { get }
     var staysAboveFullscreen: Bool { get }
+    var showsSectionList: Bool { get }
     var scriptName: String { get }
     var sectionTitles: [String] { get }
 }
@@ -105,6 +107,8 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             hint: "⌥⌘C", checked: c.isClickThrough)
         add(to: menu, "Stay Above Fullscreen Slides", #selector(togglePresentation),
             hint: "⌥⌘S", checked: c.staysAboveFullscreen)
+        add(to: menu, "Show Section List", #selector(toggleSectionList),
+            hint: "⌥⌘L", checked: c.showsSectionList)
         menu.addItem(.separator())
 
         let sections = c.sectionTitles
@@ -204,6 +208,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func faster() { commands?.adjustSpeed(by: 10) }
     @objc private func slower() { commands?.adjustSpeed(by: -10) }
     @objc private func togglePresentation() { commands?.togglePresentationMode() }
+    @objc private func toggleSectionList() { commands?.toggleSectionList() }
     @objc private func toggleDimming() { commands?.toggleDimming() }
     @objc private func pickTheme(_ sender: NSMenuItem) {
         commands?.setThemeMode(sender.representedObject as? String ?? "auto")

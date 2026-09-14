@@ -35,6 +35,8 @@ private final class OverlayView: NSView {
     var isLight = true { didSet { needsDisplay = true } }
     var showsBorder = true { didSet { needsDisplay = true } }
     var showsReadingLine = false { didSet { needsDisplay = true } }
+    /// The reading line spans the script only, not the section list.
+    var readingLineInset: CGFloat = 0 { didSet { needsDisplay = true } }
     var cornerRadius: CGFloat = 12
 
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
@@ -63,14 +65,14 @@ private final class OverlayView: NSView {
         NSColor.systemTeal.withAlphaComponent(0.28).setStroke()
         let line = NSBezierPath()
         line.lineWidth = 1
-        line.move(to: NSPoint(x: 10, y: y + 0.5))
+        line.move(to: NSPoint(x: readingLineInset + 10, y: y + 0.5))
         line.line(to: NSPoint(x: bounds.width - 10, y: y + 0.5))
         line.stroke()
 
         NSColor.systemTeal.withAlphaComponent(0.55).setFill()
         for isLeft in [true, false] {
             let tri = NSBezierPath()
-            let x: CGFloat = isLeft ? 4 : bounds.width - 4
+            let x: CGFloat = isLeft ? readingLineInset + 4 : bounds.width - 4
             let dir: CGFloat = isLeft ? 1 : -1
             tri.move(to: NSPoint(x: x, y: y - 5))
             tri.line(to: NSPoint(x: x + 7 * dir, y: y))
@@ -133,7 +135,14 @@ final class PrompterView: NSView {
     /// transparent pixels and stopped receiving mouse events altogether.
     private let solidBackground = NSView()
     private let scrollView = PrompterScrollView()
+    private let sidebar = SectionSidebarView()
     private let overlay = OverlayView()
+
+    /// Called when a section is chosen in the sidebar. Routed through the app
+    /// delegate so the speech tracker re-anchors along with the scroll.
+    var onSectionSelected: ((Int) -> Void)?
+
+    private(set) var showsSidebar = false
     private let headerLabel = NSTextField(labelWithString: "")
     /// Live transcript, shown only when diagnostics are on. Being able to see
     /// what the recognizer actually heard turns "it didn't work" into a fact.
@@ -292,6 +301,18 @@ final class PrompterView: NSView {
         scrollView.onManualScroll = { [weak self] in self?.engine.noteManualScroll() }
         addSubview(scrollView)
 
+        sidebar.isHidden = true
+        sidebar.onSelect = { [weak self] index in self?.onSectionSelected?(index) }
+        addSubview(sidebar)
+
+        // Track the section under the reading line as the script scrolls, so the
+        // sidebar always shows where you are.
+        scrollView.contentView.postsBoundsChangedNotifications = true
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(scriptDidScroll),
+            name: NSView.boundsDidChangeNotification, object: scrollView.contentView
+        )
+
         addSubview(overlay)
 
         headerLabel.font = .systemFont(ofSize: 11, weight: .semibold)
@@ -326,10 +347,14 @@ final class PrompterView: NSView {
         debugLabel.frame = NSRect(
             x: 14, y: bounds.height - 15, width: bounds.width - 28, height: 13
         )
+        let contentHeight = max(0, bounds.height - top - bottom)
+        let sidebarWidth = showsSidebar ? Self.sidebarWidth(for: bounds.width) : 0
+        sidebar.frame = NSRect(x: 0, y: top, width: sidebarWidth, height: contentHeight)
         scrollView.frame = NSRect(
-            x: 0, y: top,
-            width: bounds.width, height: max(0, bounds.height - top - bottom)
+            x: sidebarWidth, y: top,
+            width: max(0, bounds.width - sidebarWidth), height: contentHeight
         )
+        overlay.readingLineInset = sidebarWidth
 
         // Insets let the very first and very last word reach the reading line.
         let line = readingLineY
@@ -337,6 +362,37 @@ final class PrompterView: NSView {
             top: line, left: 0,
             bottom: max(0, scrollView.bounds.height - line), right: 0
         )
+    }
+
+    /// About a third of the panel, within limits: narrow enough to leave the
+    /// script most of the width, wide enough for a title to be readable.
+    private static func sidebarWidth(for panelWidth: CGFloat) -> CGFloat {
+        min(230, max(130, panelWidth * 0.3))
+    }
+
+    /// Shows or hides the section list without losing your place.
+    ///
+    /// Changing the script's width reflows every line, so the word on the reading
+    /// line moves. It is captured first and put back after the reflow.
+    func setSidebarVisible(_ visible: Bool) {
+        guard visible != showsSidebar else { return }
+        let anchor = wordIndexAtReadingLine()
+
+        showsSidebar = visible
+        sidebar.isHidden = !visible
+        needsLayout = true
+        layoutSubtreeIfNeeded()
+        layoutManager.ensureLayout(for: textContainer)
+
+        if let anchor, let offset = scrollOffset(forWord: anchor) {
+            engine.snap(to: offset)
+        }
+        scriptDidScroll()
+    }
+
+    @objc private func scriptDidScroll() {
+        guard showsSidebar else { return }
+        sidebar.currentSection = currentSectionIndex()
     }
 
     /// Latest reading from the background sampler, when automatic colour is on.
@@ -408,6 +464,8 @@ final class PrompterView: NSView {
         solidBackground.layer?.backgroundColor = (isLightTheme ? NSColor.white : .black)
             .withAlphaComponent(opacity).cgColor
         headerLabel.textColor = scriptTextColor.withAlphaComponent(0.55)
+        sidebar.textColor = scriptTextColor
+        sidebar.accentColor = headingTextColor
         debugLabel.textColor = isLightTheme
             ? NSColor(calibratedRed: 0.55, green: 0.30, blue: 0.0, alpha: 0.9)
             : NSColor.systemYellow.withAlphaComponent(0.75)
@@ -433,6 +491,16 @@ final class PrompterView: NSView {
         headerLabel.stringValue = sourceName ?? ""
         renderText(preservingPosition: false)
         engine.snap(to: -readingLineY)
+
+        // Untitled preamble has nothing to click on, so it is left out. A heading
+        // with no body is kept as a group label: it still helps you find your way.
+        sidebar.entries = newScript.sections.enumerated().compactMap { index, section in
+            guard !section.title.isEmpty else { return nil }
+            return SidebarEntry(
+                sectionIndex: index, title: section.title, isGroup: section.wordCount == 0
+            )
+        }
+        scriptDidScroll()
     }
 
     private func renderText(preservingPosition: Bool) {
@@ -564,6 +632,9 @@ final class PrompterView: NSView {
             engine.snap(to: offset)
             engine.target = offset
         }
+        // A heading with no body never sits under the reading line, so mark the
+        // clicked row directly rather than waiting for the scroll to report it.
+        sidebar.currentSection = section.wordCount > 0 ? index : sidebar.currentSection
     }
 
     func currentSectionIndex() -> Int? {

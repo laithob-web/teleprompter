@@ -72,6 +72,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
         wireFlow()
         wireListener()
 
+        prompter.onSectionSelected = { [weak self] index in self?.jump(toSection: index) }
+        prompter.setSidebarVisible(Settings.shared.showsSectionList)
+
         panel.setAlwaysOnTop(Settings.shared.staysAboveFullscreen)
         showPanel()
         updateSampler()
@@ -152,6 +155,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
         }
         m.register(keyCode: Key.s, modifiers: Key.cmdOpt) { [weak self] in
             self?.togglePresentationMode()
+        }
+        m.register(keyCode: Key.l, modifiers: Key.cmdOpt) { [weak self] in
+            self?.toggleSectionList()
         }
         // Only route back in when the icon is hidden.
         m.register(keyCode: Key.m, modifiers: Key.cmdOpt) { [weak self] in
@@ -460,6 +466,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
     /// presenting. It stays excluded from screen capture either way.
     func togglePresentationMode() {
         Settings.shared.staysAboveFullscreen.toggle()
+        prompter.onSectionSelected = { [weak self] index in self?.jump(toSection: index) }
+        prompter.setSidebarVisible(Settings.shared.showsSectionList)
+
         panel.setAlwaysOnTop(Settings.shared.staysAboveFullscreen)
         showPanel()
         prompter.setHeader(
@@ -577,8 +586,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PrompterCommands {
 
     func jump(toSection index: Int) {
         prompter.jump(toSection: index)
+        // Re-seed the speech tracker, or it keeps listening for the words of the
+        // section you just left and drags the script back there.
+        if let word = prompter.wordIndexAtReadingLine() {
+            flow.reanchor(to: word)
+        }
         broadcastCurrentPosition()
     }
+
+    func toggleSectionList() {
+        Settings.shared.showsSectionList.toggle()
+        prompter.setSidebarVisible(Settings.shared.showsSectionList)
+    }
+
+    var showsSectionList: Bool { Settings.shared.showsSectionList }
 
     /// Mirrors wherever the Mac has moved to onto any connected phone.
     private func broadcastCurrentPosition() {

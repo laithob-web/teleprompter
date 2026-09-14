@@ -76,6 +76,18 @@ own slides — still hidden from the audience, just invisible to you too.
 level, above any slideshow. It remains excluded from screen capture at that
 level; only the stacking order changes.
 
+## Section list
+
+A clickable list of your sections sits on the left of the panel. Click one to
+jump there; the section you are currently reading stays highlighted as you
+scroll or speak. Headings with nothing under them appear as dimmed group labels.
+
+It is part of the prompter window rather than a second window, so it is hidden
+from screen capture, floats above slides, and moves and resizes with the panel
+without any extra handling. It is drawn by hand rather than with a table view,
+because a table takes keyboard focus on click — which would break the meeting
+app's mute shortcut until you clicked back. ⌥⌘L hides it.
+
 ## Phone or tablet as the prompter
 
 **Show on Phone…** in the menu starts a small local server and shows a QR code.
@@ -111,6 +123,7 @@ or frame codec on either side.
 | `⌥⌘Z` | Undo the last automatic jump |
 | `⌥⌘C` | Click-through mode |
 | `⌥⌘S` | Stay above fullscreen slides |
+| `⌥⌘L` | Show / hide the section list |
 | `⌥⌘R` | Resync after scrolling by hand |
 | `⌥⌘[` `⌥⌘]` | Previous / next section |
 | `⌥⌘-` `⌥⌘=` | Text size |

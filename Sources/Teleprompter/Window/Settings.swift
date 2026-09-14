@@ -93,6 +93,12 @@ final class Settings {
         set { set("showsReadingLine", newValue) }
     }
 
+    /// Clickable section list on the left of the prompter.
+    var showsSectionList: Bool {
+        get { value("showsSectionList", true) }
+        set { set("showsSectionList", newValue) }
+    }
+
     /// Float above fullscreen slideshows while presenting.
     var staysAboveFullscreen: Bool {
         get { value("staysAboveFullscreen", false) }

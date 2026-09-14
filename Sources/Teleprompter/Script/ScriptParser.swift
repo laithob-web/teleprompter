@@ -251,17 +251,20 @@ enum ScriptParser {
         for (i, section) in input.enumerated() {
             var s = section
 
-            if i > 0 { display += "\n\n" }
+            // A paragraph break between sections, never a blank line. A blank
+            // line is an empty paragraph: a full line of dead space stacked on the
+            // heading's own spacing-before, which is what separates sections. Two
+            // headings in a row ("Results & Impact" then "1. Subfeed") showed a
+            // gap of several lines.
+            if i > 0 { display += "\n" }
 
             if !s.title.isEmpty {
                 let start = (display as NSString).length
                 display += s.title
                 s.titleRange = NSRange(location: start, length: (s.title as NSString).length)
-                // One newline, not two. A blank line here became an empty
-                // paragraph that collected the body's paragraph spacing on top of
-                // the heading's, opening a gap far larger than either value.
-                // Spacing between heading and body is set in ScriptRenderer.
-                display += "\n"
+                // Only break after the heading when there is a body to follow;
+                // otherwise the next section's own break is enough.
+                if !s.body.isEmpty { display += "\n" }
             }
 
             let bodyStart = (display as NSString).length
